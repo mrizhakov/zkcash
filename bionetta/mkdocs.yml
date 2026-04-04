@@ -1,0 +1,70 @@
+site_name: Bionetta Docs
+site_url: https://example.com   # TODO: Set own URL
+site_description: "Documentation for project"
+
+repo_url: https://github.com/rarimo/bionetta
+repo_name: Bionetta
+
+theme:
+  name: 'material'
+  logo: '../images/logo.svg'
+  palette:
+    # Light theme (Default)
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+
+    # Dark theme (Slate)
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+  font:
+    text: 'Roboto'
+    code: 'Fira Code'
+  features:
+    - navigation.top
+    - content.code.annotate
+    - navigation.sections
+    - header.autohide
+    - toc.integrate
+    - content.code.copy
+    - navigation.expand 
+
+# Navigation
+nav:
+  - Welcome: index.md
+  - Getting Started:
+    - How it works?: getting-started/how-it-works.md
+    - Bionetta wrapper: getting-started/bionetta-wrapper.md
+    - Circom Code Generation: getting-started/circom-codegen.md
+    - Rust Code Generation: getting-started/rust-codegen.md
+    - Final steps with PTAU and ZKey: getting-started/final-steps-with-ptau-and-zkey.md
+    - Prove and Verify: getting-started/prove-and-verify.md
+
+plugins:
+  - search
+  - callouts
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.highlight: 
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg

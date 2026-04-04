@@ -1,0 +1,86 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+
+# Python environments
+bionetta_env/
+.venv/
+venv/
+
+# Environment secrets
+.env
+.env.*
+contracts/.env
+
+# Build artifacts
+dist/
+dist-ssr/
+coverage/
+
+# Hardhat artifacts
+contracts/artifacts/
+contracts/cache/
+contracts/typechain-types/
+
+# Generated ML/ZK artifacts and proving files
+compiled_circuit/
+compiled_circuit_v10_demo/
+compiled_circuit_v20_lfw/
+*.zkey
+*.ptau
+*.r1cs
+*.wtns
+*.sym
+*.wasm
+*.proof
+proof.json
+public.json
+verification_key.json
+
+# Public generated model binaries
+public/model*.wasm
+public/model*.zkey
+
+# Datasets and archives
+datasets/raw/
+datasets/faces/
+*.zip
+*.tgz
+*.tar
+
+# Nested generated repos/vendor clones
+bionetta/tf_bionetta/repos/
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

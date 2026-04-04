@@ -1,0 +1,5 @@
+site_name: Bionetta Docs
+nav:
+  - Home: README.md
+  - Guide: files/
+theme: readthedocs
