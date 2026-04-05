@@ -1,0 +1,33 @@
+# Dependencies and local environments
+node_modules
+bionetta_env
+
+# Build outputs and caches
+dist
+.cache
+
+# Large generated artifacts and ML assets
+datasets
+compiled_circuit
+compiled_circuit_v10_demo
+compiled_circuit_v20_lfw
+public/test_images
+public/verification_key.json
+
+# Python and training toolchain not needed for frontend deploy
+bionetta
+tf_bionetta
+tf_bionetta.egg-info
+scripts
+*.py
+
+# Smart contract workspace not required for static frontend hosting
+contracts
+
+# Misc project files not required at runtime
+neuro_audit.js
+neuro_diag.cjs
+test_runner.cjs
+generate_20x20_model.py
+generate_20x20_weights.cjs
+generate_30x30_weights.cjs

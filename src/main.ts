@@ -1,5 +1,5 @@
 /**
- * main.ts — Entry point for Bionetta Face Compare
+ * main.ts — Entry point for ZKcash
  */
 
 import "./style.css";
@@ -19,7 +19,7 @@ import {
   type EnrollmentCalibrationInfo,
 } from "./web3";
 
-console.log("🚀 BIONETTA VERSION 2.0.0 - WITNESS-SYNC PASS");
+console.log("🚀 ZKCASH VERSION 2.0.0 - WITNESS-SYNC PASS");
 
 // ─── State ──────────────────────────────────────────────────────────────────
 
@@ -36,6 +36,8 @@ interface AppState {
   currentNonce: bigint | null;
   currentCalibration: EnrollmentCalibrationInfo | null;
 }
+
+const CLAIM_PRECHECK_FULL_DISTANCE = 0.55;
 
 const state: AppState = {
   imageA: null,
@@ -111,7 +113,7 @@ async function init(): Promise<void> {
     setupUI();
   } catch (err) {
     loadingStatus.textContent = `Error: ${(err as Error).message}`;
-    console.error("[Bionetta] Init failed:", err);
+    console.error("[ZKcash] Init failed:", err);
   }
 }
 
@@ -229,15 +231,14 @@ function updateDebugPanel(): void {
   }
   debugDistCNN.textContent = (squaredDistCNN / 1e6).toFixed(1) + "M";
 
-  // Likeness score calculation (Scientifically Valid Threshold of 2.2B)
-  const activeThreshold = Number(state.currentThreshold ?? 2200000000n);
+  // Likeness score calculation against active on-chain threshold.
+  const activeThreshold = Number(state.currentThreshold ?? 900000n);
 
   // Likeness score normalized to the active lock threshold.
   const likeness = Math.max(0, 100 - squaredDistCNN / (activeThreshold / 100));
   debugLikenessBar.style.width = `${likeness}%`;
   debugLikenessPercent.textContent = `${Math.round(likeness)}%`;
 
-  // Update status color (New 2.2B Calibration)
   // Update status color against active on-chain threshold.
   if (squaredDistCNN < activeThreshold) {
     debugLikenessPercent.style.color = "var(--accent-green)";
@@ -247,7 +248,7 @@ function updateDebugPanel(): void {
     debugLikenessPercent.style.color = "var(--accent-red)";
   }
 
-  console.log("[Bionetta ScientificSync] Live Connection:", {
+  console.log("[ZKcash ScientificSync] Live Connection:", {
     fullDist: distFull,
     cnnSquaredDist: squaredDistCNN,
     passLimit: activeThreshold,
@@ -298,7 +299,7 @@ async function handleImage(side: "a" | "b", file: File): Promise<void> {
   } catch (err) {
     statusEl.textContent = "Error loading image";
     statusEl.className = "face-status error";
-    console.error(`[Bionetta] Image ${side} error:`, err);
+    console.error(`[ZKcash] Image ${side} error:`, err);
   }
 }
 
@@ -466,6 +467,17 @@ async function handleClaim() {
   resultLoading.hidden = false;
 
   try {
+    const fullDistance = calculateDistance(
+      state.imageA!.embedding!.embedding,
+      state.imageB!.embedding!.embedding,
+    );
+
+    if (fullDistance > CLAIM_PRECHECK_FULL_DISTANCE) {
+      throw new Error(
+        `Biometric pre-check failed: face distance ${fullDistance.toFixed(4)} exceeds safety limit ${CLAIM_PRECHECK_FULL_DISTANCE.toFixed(2)}.`,
+      );
+    }
+
     // 1. ZK proof generation
     loadingTxt.textContent = "Generating ZK Proof locally...";
 

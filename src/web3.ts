@@ -9,7 +9,7 @@ const FaceLockedTransferABI = [
   "event FundsClaimed(uint256 indexed lockId, address indexed recipient, uint256 amount)",
 ];
 
-const CONTRACT_ADDRESS = "0xf42c374Cb89e6ac75d54a1731eF4015eb6f29CB2"; // v10 fast verifier deployment - Base Sepolia
+const CONTRACT_ADDRESS = "0x06598187677A261d54fd89ECb5497E2295C3A6Fb"; // patched deployment - Base Sepolia
 const CIRCUIT_WASM_PATH = "/model_v10.wasm";
 const CIRCUIT_ZKEY_PATH = "/model_v10_final.zkey";
 const CIRCUIT_ASSET_TAG = "v10";
@@ -170,10 +170,11 @@ const BN254_PRIME = BigInt(
   "21888242871839275222246405745257275088548364400416034343698204186575808495617",
 );
 
-const DEFAULT_LOCK_THRESHOLD = 2200000000n;
-const IMPOSTOR_GUARD_CAP = 2900000000n;
-const SOFT_MAX_LOCK_THRESHOLD = 3600000000n;
-const HARD_MAX_LOCK_THRESHOLD = 4800000000n;
+const MIN_LOCK_THRESHOLD = 100000n;
+const DEFAULT_LOCK_THRESHOLD = 900000n;
+const IMPOSTOR_GUARD_CAP = 20000000n;
+const SOFT_MAX_LOCK_THRESHOLD = 35000000n;
+const HARD_MAX_LOCK_THRESHOLD = 100000000n;
 const SELF_CHECK_THRESHOLD = "1";
 
 export interface EnrollmentCalibrationInfo {
@@ -207,7 +208,7 @@ export function predict20x20(image: number[][][], p: number = 15): number[] {
     return q.map((sum, i) => Math.trunc(sum / Math.max(1, counts[i])));
   }
 
-  // 1. Conv2D (Aligned with Bionetta 20x20 Architecture)
+  // 1. Conv2D (Aligned with ZKcash 20x20 Architecture)
   const outSize = 9;
   const numFilters = 2;
   const convOut = Array(numFilters)
@@ -586,7 +587,7 @@ export async function depositFunds(
       }
 
       if (await checkWithWitness(maybe)) {
-        console.log("[Bionetta WitnessSync] Calibrated feature offset:", start);
+        console.log("[ZKcash WitnessSync] Calibrated feature offset:", start);
         return {
           features: maybe,
           calibratedOffset: start,
@@ -601,7 +602,7 @@ export async function depositFunds(
       if (!maybe) continue;
       if (await checkWithProof(maybe)) {
         console.log(
-          "[Bionetta WitnessSync] Calibrated feature offset via proof fallback:",
+          "[ZKcash WitnessSync] Calibrated feature offset via proof fallback:",
           start,
         );
         return {
@@ -626,10 +627,10 @@ export async function depositFunds(
     throw new Error("Failed to extract 4-dimensional enrolled features.");
   }
   console.log(
-    "[Bionetta WitnessSync] Circuit's TRUE CNN features:",
+    "[ZKcash WitnessSync] Circuit's TRUE CNN features:",
     realFeatures,
   );
-  console.log("[Bionetta WitnessSync] Calibration telemetry:", {
+  console.log("[ZKcash WitnessSync] Calibration telemetry:", {
     offset: calibration.calibratedOffset,
     offsetsTried: calibration.offsetsTried,
     calibrationMs,
@@ -672,13 +673,19 @@ export async function depositFunds(
     }
 
     if (distances.length === 0) {
-      // Conservative fallback for rare artifact/layout inconsistencies.
+      // Secure fallback for rare artifact/layout inconsistencies.
+      let threshold = DEFAULT_LOCK_THRESHOLD;
+      const normBasedMinThreshold = (featureNormSq * 55n) / 1000n;
+      if (threshold < normBasedMinThreshold) threshold = normBasedMinThreshold;
+      if (threshold < MIN_LOCK_THRESHOLD) threshold = MIN_LOCK_THRESHOLD;
+      if (threshold > IMPOSTOR_GUARD_CAP) threshold = IMPOSTOR_GUARD_CAP;
+
       return {
-        threshold: DEFAULT_LOCK_THRESHOLD,
+        threshold,
         variantsSampled: 0,
         maxVariantDistance: 0n,
         p90VariantDistance: 0n,
-        normBasedMinThreshold: (featureNormSq * 55n) / 1000n,
+        normBasedMinThreshold,
       };
     }
 
@@ -687,7 +694,7 @@ export async function depositFunds(
     const p90VariantDistance = distances[p90Index];
 
     // Robust thresholding: use P90 to avoid single outlier variants causing over-lenient locks.
-    const margin = (p90VariantDistance * 10n) / 100n + 1n;
+    const margin = (p90VariantDistance * 25n) / 100n + 50000n;
     let threshold = p90VariantDistance + margin;
 
     // Model-scale floor: small synthetic perturbations can underestimate real same-person variance.
@@ -695,7 +702,7 @@ export async function depositFunds(
     const normBasedMinThreshold = (featureNormSq * 55n) / 1000n; // 5.5% of ||f||^2
 
     if (threshold < normBasedMinThreshold) threshold = normBasedMinThreshold;
-    if (threshold < DEFAULT_LOCK_THRESHOLD) threshold = DEFAULT_LOCK_THRESHOLD;
+    if (threshold < MIN_LOCK_THRESHOLD) threshold = MIN_LOCK_THRESHOLD;
 
     // Hard quality gate: reject enrollments that require very large thresholds.
     if (threshold > HARD_MAX_LOCK_THRESHOLD) {
@@ -730,7 +737,7 @@ export async function depositFunds(
 
   const adaptive = await deriveAdaptiveThreshold();
   const finalThreshold = adaptive.threshold;
-  console.log("[Bionetta WitnessSync] Adaptive threshold telemetry:", {
+  console.log("[ZKcash WitnessSync] Adaptive threshold telemetry:", {
     finalThreshold: finalThreshold.toString(),
     maxVariantDistance: adaptive.maxVariantDistance.toString(),
     p90VariantDistance: adaptive.p90VariantDistance.toString(),
@@ -990,7 +997,7 @@ export async function claimFunds(
   inputParams.nonce = lock.nonce.toString();
 
   console.log(
-    "[Bionetta Debug] Current Quantized Features (Target):",
+    "[ZKcash Debug] Current Quantized Features (Target):",
     enrolledFeatures,
   );
   console.log(

@@ -6,14 +6,14 @@
  * - 68-point face landmarks
  * - 128-dimensional face recognition embeddings (FaceNet-style)
  *
- * The architecture mirrors `@rarimo/bionetta-js-sdk-core`:
+ * The architecture mirrors the ZKcash face-match pipeline:
  *   FaceDetectorService → getFaceFeatureVectors() → distance calc
  *
- * In the full Bionetta ZKML pipeline, the distance comparison
+ * In the full ZKcash ZKML pipeline, the distance comparison
  * happens inside a Circom circuit producing a Groth16 ZK-SNARK proof.
  */
 
-import * as faceapi from '@vladmandic/face-api';
+import * as faceapi from "@vladmandic/face-api";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -51,29 +51,29 @@ export interface ComparisonResult {
  * - 0.4-0.6 = uncertain
  * - > 0.6 = different persons
  *
- * In Bionetta's ZK circuit, this threshold check happens in R1CS constraints.
+ * In ZKcash's ZK circuit, this threshold check happens in R1CS constraints.
  */
 const MATCH_THRESHOLD = 0.45;
 const UNCERTAIN_UPPER = 0.6;
 
 // ─── Model Loading ──────────────────────────────────────────────────────────
 
-const MODEL_URL = '/models';
+const MODEL_URL = "/models";
 
 export async function loadModels(
   onProgress?: (status: string) => void,
 ): Promise<void> {
-  onProgress?.('Loading face detection model…');
+  onProgress?.("Loading face detection model…");
   await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
 
-  onProgress?.('Loading face landmark model…');
+  onProgress?.("Loading face landmark model…");
   await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 
-  onProgress?.('Loading face recognition model…');
+  onProgress?.("Loading face recognition model…");
   await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
-  onProgress?.('Models loaded!');
-  console.log('[Bionetta] All face-api.js models loaded');
+  onProgress?.("Models loaded!");
+  console.log("[ZKcash] All face-api.js models loaded");
 }
 
 // ─── Face Detection + Embedding ─────────────────────────────────────────────
@@ -81,12 +81,12 @@ export async function loadModels(
 /**
  * Detect the most prominent face in an image and extract its 128-dim embedding.
  *
- * This mirrors Bionetta SDK's pipeline:
+ * This mirrors the ZKcash pipeline:
  *   FaceDetectorService.detectFaces() → getFaceFeatureVectors()
  *
  * face-api.js gives us a production-quality 128-dim face descriptor
  * (FaceNet architecture), which is the same dimensionality that
- * Bionetta's model outputs.
+ * ZKcash model outputs.
  */
 export async function extractFaceEmbedding(
   input: HTMLCanvasElement | HTMLImageElement,
@@ -138,7 +138,7 @@ function cosineSimilarity(a: Float32Array, b: Float32Array): number {
 
 /**
  * Compute Euclidean distance between two vectors.
- * This is what Bionetta's ZK circuit actually proves:
+ * This is what ZKcash's ZK circuit actually proves:
  *   "The Euclidean distance between embedding A and B is ≤ threshold"
  */
 function euclideanDistance(a: Float32Array, b: Float32Array): number {
@@ -158,27 +158,33 @@ function euclideanDistance(a: Float32Array, b: Float32Array): number {
 /**
  * Compare two face embeddings and return a detailed result.
  *
- * Uses Euclidean distance as the primary metric (same as Bionetta's ZK circuit),
+ * Uses Euclidean distance as the primary metric (same as ZKcash's ZK circuit),
  * with cosine similarity as a secondary signal.
  */
-export function compareFaces(a: FaceEmbedding, b: FaceEmbedding): ComparisonResult {
+export function compareFaces(
+  a: FaceEmbedding,
+  b: FaceEmbedding,
+): ComparisonResult {
   const distance = euclideanDistance(a.embedding, b.embedding);
   const cosine = cosineSimilarity(a.embedding, b.embedding);
 
   // Convert distance to a 0-100 match percentage
   // Distance of 0 = 100% match, distance of 1.0+ = 0% match
-  const matchPercentage = Math.max(0, Math.min(100, Math.round((1 - distance / 1.0) * 100)));
+  const matchPercentage = Math.max(
+    0,
+    Math.min(100, Math.round((1 - distance / 1.0) * 100)),
+  );
 
   const isMatch = distance < MATCH_THRESHOLD;
   const isUncertain = !isMatch && distance < UNCERTAIN_UPPER;
 
   let label: string;
   if (isMatch) {
-    label = '✓ Same Person';
+    label = "✓ Same Person";
   } else if (isUncertain) {
-    label = '? Uncertain';
+    label = "? Uncertain";
   } else {
-    label = '✗ Different Person';
+    label = "✗ Different Person";
   }
 
   return {

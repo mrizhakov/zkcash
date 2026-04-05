@@ -84,3 +84,4 @@ bionetta/tf_bionetta/repos/
 *.njsproj
 *.sln
 *.sw?
+.vercel
