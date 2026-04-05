@@ -26,9 +26,9 @@ contract FaceLockedTransfer {
     struct Lock {
         address sender;
         uint256 amount;
-        uint256 faceCommitment;  // poseidon_hash(reference_embedding)
-        uint256 threshold;       // max allowed distance² (arithmetized)
-        uint256 nonce;           // replay protection
+        uint256 faceCommitment; // poseidon_hash(reference_embedding)
+        uint256 threshold; // max allowed distance² (arithmetized)
+        uint256 nonce; // replay protection
         bool claimed;
         uint256 createdAt;
     }
@@ -66,11 +66,15 @@ contract FaceLockedTransfer {
     error CommitmentMismatch();
     error NotSender();
     error TooEarly();
+    error ThresholdOutOfRange();
 
     // ─── Constants ──────────────────────────────────────────────────
 
     /// @notice Time after which the sender can reclaim their funds
     uint256 public constant REFUND_DELAY = 30 days;
+
+    /// @notice Hard upper bound for lock threshold to reduce false-positive risk.
+    uint256 public constant MAX_THRESHOLD = 100_000_000;
 
     // ─── Constructor ────────────────────────────────────────────────
 
@@ -94,6 +98,8 @@ contract FaceLockedTransfer {
         uint256 nonce
     ) external payable {
         if (msg.value == 0) revert NoValueSent();
+        if (threshold == 0 || threshold > MAX_THRESHOLD)
+            revert ThresholdOutOfRange();
 
         uint256 lockId = nextLockId++;
 
@@ -107,7 +113,13 @@ contract FaceLockedTransfer {
             createdAt: block.timestamp
         });
 
-        emit FundsLocked(lockId, msg.sender, msg.value, faceCommitment, threshold);
+        emit FundsLocked(
+            lockId,
+            msg.sender,
+            msg.value,
+            faceCommitment,
+            threshold
+        );
     }
 
     // ─── Claim ──────────────────────────────────────────────────────
@@ -117,7 +129,7 @@ contract FaceLockedTransfer {
      * @dev The proof is generated client-side by Bionetta's ProverWorker.
      *      Public signals layout:
      *        [0] = address (msg.sender, bound in circuit)
-     *        [1] = threshold² 
+     *        [1] = threshold²
      *        [2] = nonce
      *        [3] = faceCommitment
      * @param lockId The ID of the lock to claim.
@@ -143,17 +155,19 @@ contract FaceLockedTransfer {
         // _pubSignals[2] = address
         // _pubSignals[3] = threshold
         // _pubSignals[4] = nonce
-        
+
         if (_pubSignals[0] != lock.faceCommitment) revert CommitmentMismatch();
         if (_pubSignals[1] != 1) revert InvalidProof();
-        
+
         // Cryptographic Binding Checks
-        if (_pubSignals[2] != uint256(uint160(msg.sender))) revert InvalidProof(); 
+        if (_pubSignals[2] != uint256(uint160(msg.sender)))
+            revert InvalidProof();
         if (_pubSignals[3] != lock.threshold) revert InvalidProof();
         if (_pubSignals[4] != lock.nonce) revert InvalidProof();
 
         // Verify the ZK proof on-chain
-        if (!verifier.verifyProof(_pA, _pB, _pC, _pubSignals)) revert InvalidProof();
+        if (!verifier.verifyProof(_pA, _pB, _pC, _pubSignals))
+            revert InvalidProof();
 
         // Mark as claimed and transfer
         lock.claimed = true;
@@ -190,15 +204,21 @@ contract FaceLockedTransfer {
     /**
      * @notice Get lock details.
      */
-    function getLock(uint256 lockId) external view returns (
-        address sender,
-        uint256 amount,
-        uint256 faceCommitment,
-        uint256 threshold,
-        uint256 nonce,
-        bool claimed,
-        uint256 createdAt
-    ) {
+    function getLock(
+        uint256 lockId
+    )
+        external
+        view
+        returns (
+            address sender,
+            uint256 amount,
+            uint256 faceCommitment,
+            uint256 threshold,
+            uint256 nonce,
+            bool claimed,
+            uint256 createdAt
+        )
+    {
         Lock storage lock = locks[lockId];
         return (
             lock.sender,
